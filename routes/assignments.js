@@ -2,17 +2,35 @@ const mongoose = require('mongoose');
 let Assignment = require('../model/assignment');
 
 // ===============================
-// GET /api/assignments  (avec pagination)
+// GET /api/assignments  (avec pagination + tri global)
 // ===============================
 function getAssignments(req, res) {
   // On lit page & limit depuis la query string, avec valeurs par défaut
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 10;
 
-  // On construit un aggregate vide (on pourrait filtrer / trier ici)
+  // Lecture du tri demandé : ?sort=recent ou ?sort=old
+  const sortParam = req.query.sort;
+  let sort = {};
+
+  if (sortParam === 'recent') {
+    // plus récents d'abord -> dateDeRendu décroissante
+    sort = { dateDeRendu: -1, _id: -1 };
+  } else if (sortParam === 'old') {
+    // plus anciens d'abord -> dateDeRendu croissante
+    sort = { dateDeRendu: 1, _id: 1 };
+  }
+
+  // Aggregate "de base" (on pourrait filtrer ici plus tard si besoin)
   const aggregate = Assignment.aggregate();
 
-  Assignment.aggregatePaginate(aggregate, { page, limit })
+  const options = {
+    page,
+    limit,
+    sort
+  };
+
+  Assignment.aggregatePaginate(aggregate, options)
     .then(result => {
       // result ressemble à :
       // {
